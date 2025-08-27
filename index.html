@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rest-Day Coach</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#f8fafc; color:#0f172a;}
+    .container { max-width: 1100px; margin: 0 auto; padding: 12px; }
+    .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px; }
+    .grid2 { display:grid; grid-template-columns: 1fr; gap:12px; }
+    .grid3 { display:grid; grid-template-columns: 1fr; gap:8px; }
+    .weekgrid { display:grid; grid-template-columns: repeat(1, 1fr); gap:8px; }
+    .liftsgrid { display:grid; grid-template-columns: 1fr; gap:8px; }
+    @media (min-width: 700px) {
+      .grid2 { grid-template-columns: 1fr 1fr; }
+      .weekgrid { grid-template-columns: repeat(7, 1fr); }
+      .liftsgrid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .muted { color:#64748b; }
+    .chip { background:#f1f5f9; padding:6px 8px; border-radius:8px; display:inline-block; }
+    button, select, input { font: inherit; }
+    button { padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; }
+    button:active { transform: translateY(1px); }
+    input[type="number"], input[type="text"] { width: 100%; padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; }
+    .toolbar { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+    .h1 { margin:0 0 2px 0; font-size:24px; }
+    .mantra { background:#eef2ff; color:#3730a3; padding:8px; border-radius:10px; margin:8px 0; }
+    .small { font-size:12px; }
+  </style>
+  <!-- React + Babel (für JSX ohne Build) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+
+    const { useMemo, useState, useEffect } = React;
+
+    // ===== Helpers & Daten =====
+    const today = () => new Date();
+    const startOfWeek = (d) => {
+      const x = new Date(d);
+      const day = (x.getDay() + 6) % 7; // Mo=0
+      x.setDate(x.getDate() - day);
+      x.setHours(0,0,0,0);
+      return x;
+    };
+    const fmt = (d) => d.toLocaleDateString("de-AT",{ day:"2-digit", month:"2-digit" });
+
+    const BLOCKS = [
+      { name:"Einstieg", type:"einstieg", start:"2025-09-01", end:"2025-09-07" },
+      { name:"Aufbau I", type:"aufbau",  start:"2025-09-08", end:"2025-09-28" },
+      { name:"Deload",   type:"deload",  start:"2025-09-29", end:"2025-10-05" },
+      { name:"Aufbau II",type:"aufbau",  start:"2025-10-06", end:"2025-10-26" },
+      { name:"Deload",   type:"deload",  start:"2025-10-27", end:"2025-11-02" },
+      { name:"Aufbau III",type:"aufbau", start:"2025-11-03", end:"2025-12-14" },
+      { name:"Deload",   type:"deload",  start:"2025-12-15", end:"2025-12-21" },
+    ];
+
+    const mantras = [
+      "Mein Muskel wächst, wenn ich ruhe.",
+      "Heute lade ich auf – morgen liefere ich ab.",
+      "Regeneration ist Training fürs Nervensystem.",
+      "Tempo entsteht aus Technik + Ruhe.",
+      "Konstanz schlägt Perfektion.",
+      "Ich höre auf meinen Körper, nicht auf meinen Ego-Timer.",
+      "Langfristig stark statt kurzfristig erschöpft."
+    ];
+
+    const dinners = [
+      { name:"Süßkartoffel-Linsen-Suppe", tag:"70/30" },
+      { name:"Hirse-Tabouleh",            tag:"70/30" },
+      { name:"Kartoffel-Erbsen-Suppe",    tag:"70/30" },
+      { name:"Polenta mit Pilzen",        tag:"70/30" },
+      { name:"Veggie-Chili",              tag:"Aufbau" },
+      { name:"Ofengemüse + Kichererbsen-Bowl", tag:"Aufbau" },
+    ];
+
+    const TPL = {
+      aufbau: [
+        { day:1, type:"kraft",    label:"Kraft: Squat + Bank" },
+        { day:2, type:"ausdauer", label:"Ausdauer locker 30–45’" },
+        { day:3, type:"crossfit", label:"CrossFit – All-out + 10’ Mobility" },
+        { day:4, type:"rest",     label:"Active Recovery + 15’ Mobility" },
+        { day:5, type:"kraft",    label:"Kraft: Deadlift + Press" },
+        { day:6, type:"ausdauer", label:"Ausdauer mittel/lang (10 km/60’)" },
+        { day:7, type:"rest",     label:"Rest – Spaziergang/Kinderwagen" },
+      ],
+      einstieg: [
+        { day:1, type:"kraft",    label:"Kraft leicht: Squat + Bank (Technik)" },
+        { day:2, type:"ausdauer", label:"Lauf locker 30–40’" },
+        { day:3, type:"crossfit", label:"CrossFit 70% – Technik" },
+        { day:4, type:"rest",     label:"Active Recovery + 15’ Mobility" },
+        { day:5, type:"kraft",    label:"Kraft leicht: Deadlift + Press" },
+        { day:6, type:"ausdauer", label:"Rad locker 45’ / Spaziergang" },
+        { day:7, type:"rest",     label:"Rest – Entlasten" },
+      ],
+      deload: [
+        { day:1, type:"kraft",    label:"Kraft leicht (−40%) – Technik" },
+        { day:2, type:"ausdauer", label:"Rad/Lauf EASY 30’" },
+        { day:3, type:"rest",     label:"Mobility/Technik – kein CrossFit" },
+        { day:4, type:"rest",     label:"Rest Day" },
+        { day:5, type:"kraft",    label:"Kraft leicht (−40%) – Technik" },
+        { day:6, type:"ausdauer", label:"Lauf locker 30–40’" },
+        { day:7, type:"rest",     label:"Rest Day" },
+      ],
+    };
+
+    const getBlock = (d) => {
+      const x = new Date(d);
+      return BLOCKS.find(b => x >= new Date(b.start) && x <= new Date(b.end)) || { name:"Plan", type:"aufbau" };
+    };
+
+    // Progressions-Schritte (inkl. Zusatzübungen 1×/Woche)
+    const STEP = {
+      squat:2.5, deadlift:2.5, bench:1.25, press:1.25,
+      pullups:1, rdl:2.5, row_barbell:2.5, row_machine:2,
+      chestpress:2.5, legpress:5
+    };
+
+    // kleiner Hook für LocalStorage
+    const useStoredState = (key, initial) => {
+      const [val, setVal] = useState(() => {
+        try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : initial; }
+        catch { return initial; }
+      });
+      useEffect(() => {
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+      }, [key, val]);
+      return [val, setVal];
+    };
+
+    function App(){
+      const [weekStart, setWeekStart] = useStoredState("weekStart", startOfWeek(today()).toISOString());
+      const [custom, setCustom]     = useStoredState("custom", {});   // key -> {label,type}
+      const [check, setCheck]       = useStoredState("check", {});    // key -> {train,dinner,rest,water,sleep}
+      const [lifts, setLifts]       = useStoredState("lifts", {
+        squat:0, bench:0, deadlift:0, press:0,
+        pullups:0, rdl:0, row_barbell:0, row_machine:0, chestpress:0, legpress:0
+      });
+      const [tenK, setTenK]         = useStoredState("tenK", { last:"", targetDeltaPct:-1 });
+
+      const wStart = new Date(weekStart);
+      const days = useMemo(() =>
+        Array.from({length:7}, (_,i)=> new Date(wStart.getTime()+i*86400000)), [weekStart]
+      );
+
+      const block  = getBlock(wStart);
+      const tpl    = TPL[block.type];
+
+      const plan = days.map(d => {
+        const dow = ((d.getDay()+6)%7)+1; // 1..7
+        const key = d.toISOString().slice(0,10);
+        const t   = tpl.find(x => x.day===dow);
+        const o   = custom[key];
+        const type = o?.type || t.type;
+        const label= o?.label|| t.label;
+        const isRest = type === "rest" || /Rest/.test(label);
+        return { date:d, key, type, label, isRest };
+      });
+
+      const mantra = useMemo(() => {
+        const idx = Math.floor((today() - new Date("2025-01-01"))/86400000);
+        const i = ((idx % mantras.length)+mantras.length)%mantras.length;
+        return mantras[i];
+      },[]);
+
+      const dinnerFor = (d) => {
+        const b = getBlock(d);
+        const pool = b.type==="deload" ? dinners.filter(x=>x.tag==="70/30") : dinners;
+        const idx = Math.abs(Math.floor((d - new Date("2025-01-01"))/86400000)) % pool.length;
+        return pool[idx]?.name || "Gemüse-Bowl";
+      };
+
+      const isToday = (d) => new Date().toDateString() === d.toDateString();
+
+      const nextLift = (name) => {
+        const v = Number(lifts[name]||0), s = STEP[name]||1;
+        if(!v) return 0;
+        return Math.round((v+s)*2)/2; // auf 0,5 runden
+      };
+
+      // 10-km Vorschlag
+      const next10k = () => {
+        if(!tenK.last.includes(":")) return "Ziel: 10 km stabil";
+        const [m,s] = tenK.last.split(":").map(x=>parseInt(x)||0);
+        const total = m*60+s;
+        const target= Math.round(total*(1+ (tenK.targetDeltaPct||0)/100));
+        const mm = Math.floor(target/60), ss = String(target%60).padStart(2,"0");
+        return `Vorschlag: ~${mm}:${ss}`;
+      };
+
+      return (
+        <div className="container">
+          <h1 className="h1">Rest-Day Coach – Kalender</h1>
+          <div className="muted">Block: <b>{block.name}</b></div>
+
+          <div className="mantra"><b>Mantra heute:</b> {mantra}</div>
+
+          {/* Tageskarten */}
+          <div className="grid2">
+            <div className="card">
+              <h3 style={{marginTop:0}}>Morgen-Check-in</h3>
+              {plan.map(d => isToday(d.date) ? (
+                <div key={d.key}>
+                  <div><b>Heute:</b> {d.label} {d.type==="kraft" && "· Intensität 7/10"} {d.type==="crossfit" && "· All-out"} {d.type==="ausdauer" && "· locker/mittel"} {d.isRest && "· Active Recovery"}</div>
+                  <div><b>Abendessen-Idee:</b> {dinnerFor(d.date)}</div>
+                  <div><b>Journaling:</b> {block.type==="deload" ? "Wobei tut mir heute Entlastung gut?" : "Was möchte ich heute technisch sauber/locker halten?"}</div>
+                </div>
+              ) : null)}
+              {!plan.some(d=>isToday(d.date)) && <div className="muted small">Kein Tagesplan gefunden.</div>}
+            </div>
+
+            <div className="card">
+              <h3 style={{marginTop:0}}>Abend-Check-out</h3>
+              {plan.map(d => isToday(d.date) ? (
+                <div key={d.key} className="grid3">
+                  {["train","dinner","rest","water","sleep"].map(k=>(
+                    <label key={k} style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <input type="checkbox"
+                        checked={!!check[d.key]?.[k]}
+                        onChange={e=> setCheck({...check,[d.key]:{...(check[d.key]||{}),[k]:e.target.checked}})}
+                      />
+                      {k==="train"?"Training erledigt":k==="dinner"?"Abendessen gekocht/gesund":k==="rest"?"Rest/Active eingehalten":k==="water"?"2L Wasser":"7h Schlaf geplant"}
+                    </label>
+                  ))}
+                </div>
+              ) : null)}
+              <div className="small muted" style={{marginTop:6}}>Haken setzen statt lange schreiben – alles wird gespeichert.</div>
+            </div>
+          </div>
+
+          {/* Wochenplan */}
+          <div className="card" style={{marginTop:12}}>
+            <div className="toolbar">
+              <h3 style={{margin:0}}>Kalenderwoche – {fmt(new Date(wStart))} – {fmt(new Date(wStart.getTime()+6*86400000))}</h3>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setWeekStart(new Date(wStart.getTime()-7*86400000).toISOString())}>«</button>
+                <button onClick={()=>setWeekStart(startOfWeek(today()).toISOString())}>Diese Woche</button>
+                <button onClick={()=>setWeekStart(new Date(wStart.getTime()+7*86400000).toISOString())}>»</button>
+              </div>
+            </div>
+
+            <div className="weekgrid" style={{marginTop:8}}>
+              {plan.map(d=>(
+                <div key={d.key} className="card" style={{padding:8}}>
+                  <div className="small muted">
+                    {d.date.toLocaleDateString("de-AT",{ weekday:"short"})} · {fmt(d.date)}
+                  </div>
+                  <div style={{fontWeight:600, marginTop:4}}>{d.label}</div>
+                  <div style={{marginTop:6}}>
+                    <select value={d.type} onChange={e=> setCustom({...custom,[d.key]:{label:d.label, type:e.target.value}})}>
+                      <option value="kraft">Kraft</option>
+                      <option value="ausdauer">Ausdauer</option>
+                      <option value="crossfit">CrossFit</option>
+                      <option value="rest">Rest / Active</option>
+                    </select>
+                  </div>
+                  <input style={{marginTop:6}} value={d.label} onChange={e=> setCustom({...custom,[d.key]:{label:e.target.value, type:d.type}})} placeholder="Aktivität bearbeiten"/>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lifts & Progression (inkl. Zusatzübungen) */}
+          <div className="card" style={{marginTop:12}}>
+            <h3 style={{marginTop:0}}>Lifts & Progression</h3>
+            <div className="liftsgrid">
+              {Object.entries(lifts).map(([name,val])=>(
+                <div key={name} className="card" style={{padding:8}}>
+                  <div style={{fontWeight:600, textTransform:"capitalize"}}>{name}</div>
+                  <div className="small muted">Letzter Wert</div>
+                  <input type="number" value={val} onChange={e=> setLifts({...lifts,[name]:Number(e.target.value||0)})}/>
+                  <div className="small muted" style={{marginTop:4}}>Vorschlag nächstes Mal</div>
+                  <div className="chip">{nextLift(name)} {name==="pullups"?"Wdh/kg":"kg"}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 10 km */}
+          <div className="card" style={{marginTop:12}}>
+            <h3 style={{marginTop:0}}>10 km</h3>
+            <div className="grid3">
+              <div>
+                <div className="small muted">Letzte Zeit (mm:ss)</div>
+                <input value={tenK.last} onChange={e=> setTenK({...tenK,last:e.target.value})}/>
+              </div>
+              <div>
+                <div className="small muted">Ziel-Änderung %</div>
+                <input type="number" step="0.5" value={tenK.targetDeltaPct}
+                       onChange={e=> setTenK({...tenK, targetDeltaPct:Number(e.target.value)})}/>
+              </div>
+              <div style={{alignSelf:"end"}}>{next10k()}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
