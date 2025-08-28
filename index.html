@@ -6,8 +6,7 @@
   <title>Rest-Day Coach</title>
   <style>
     :root{
-      --bg:#f6f7fb; --card:#ffffff; --muted:#64748b; --border:#e5e7eb; --brand:#4f46e5; --brand-50:#eef2ff;
-      --text:#0f172a; --chip:#f1f5f9; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+      --bg:#f6f7fb; --card:#ffffff; --muted:#64748b; --border:#e5e7eb; --brand:#4f46e5; --brand-50:#eef2ff; --text:#0f172a;
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -15,8 +14,8 @@
     header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     h1{font-size:26px;margin:0}
     .sub{color:var(--muted)}
-    .tabs{display:flex;gap:6px;margin:10px 0 14px}
-    .tab{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:#111}
+    .tabs{display:flex;gap:6px;margin:10px 0 14px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff}
     .tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
     .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
     .mantra{background:var(--brand-50);color:#3730a3;padding:10px;border-radius:12px;margin:10px 0}
@@ -30,372 +29,462 @@
       .grid4{grid-template-columns:repeat(4,1fr)}
       .weekgrid{grid-template-columns:repeat(7,1fr)}
     }
-    .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
     .muted{color:var(--muted)} .small{font-size:12px}
-    .chip{background:var(--chip);padding:6px 8px;border-radius:8px;display:inline-block}
-    button,select,input,textarea{font:inherit} 
+    .chip{background:#f1f5f9;padding:6px 8px;border-radius:8px;display:inline-block}
+    button,select,input,textarea{font:inherit}
     button{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer}
     button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
-    input[type="text"],input[type="number"],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff}
+    input[type="text"],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff}
     textarea{min-height:90px;resize:vertical}
     .dayhead{font-size:12px;color:var(--muted)}
     .title{font-weight:650}
-    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 8px;background:#f8fafc;border:1px solid var(--border)}
-    .emoji{font-size:18px}
     .bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
     .bar > span{display:block;height:100%;background:linear-gradient(90deg,#4f46e5,#22c55e)}
+    .hidden{display:none}
   </style>
-  <!-- React + Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-<div id="root"></div>
+<div class="container">
+  <header>
+    <div>
+      <h1>Rest-Day Coach</h1>
+      <div class="sub" id="blockLabel">Block: –</div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="today">Heute</button>
+      <button class="tab" data-tab="week">Woche</button>
+      <button class="tab" data-tab="history">Historie</button>
+    </nav>
+  </header>
 
-<script type="text/babel" data-presets="env,react">
-const {useMemo,useState,useEffect} = React;
+  <div id="tab-today">
+    <div class="mantra"><b>Mantra:</b> <span id="mantra"></span></div>
 
-/* ===== Helpers & Data ===== */
-const today = () => new Date();
-const startOfWeek = (d) => { const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; };
-const fmt = (d) => d.toLocaleDateString("de-AT",{day:"2-digit",month:"2-digit"});
-const weekday = (d) => d.toLocaleDateString("de-AT",{weekday:"short"});
+    <div class="grid2">
+      <!-- Tageskarte -->
+      <div class="card">
+        <div class="title" style="margin-bottom:8px">📌 Tageskarte</div>
+        <div id="todayCard" class="small muted">–</div>
+      </div>
 
-const BLOCKS = [
-  { name:"Einstieg", type:"einstieg", start:"2025-09-01", end:"2025-09-07" },
-  { name:"Aufbau I", type:"aufbau",  start:"2025-09-08", end:"2025-09-28" },
-  { name:"Deload",   type:"deload",  start:"2025-09-29", end:"2025-10-05" },
-  { name:"Aufbau II",type:"aufbau",  start:"2025-10-06", end:"2025-10-26" },
-  { name:"Deload",   type:"deload",  start:"2025-10-27", end:"2025-11-02" },
-  { name:"Aufbau III",type:"aufbau", start:"2025-11-03", end:"2025-12-14" },
-  { name:"Deload",   type:"deload",  start:"2025-12-15", end:"2025-12-21" },
-];
+      <!-- Checkliste + Journaling -->
+      <div class="card">
+        <div class="title" style="margin-bottom:8px">✅ Checkliste & Journaling</div>
+        <div id="todayChecklist"></div>
+        <div class="grid3" style="margin-top:12px">
+          <div>
+            <div class="small muted">Reflexion</div>
+            <textarea id="j-reflex" placeholder="Was hat mir Training heute über mich gezeigt?"></textarea>
+          </div>
+          <div>
+            <div class="small muted">Tagesplanung</div>
+            <textarea id="j-plan" placeholder="Was ist morgen realistisch + sinnvoll?"></textarea>
+          </div>
+          <div>
+            <div class="small muted">Dankbarkeit</div>
+            <textarea id="j-dank" placeholder="Wofür bin ich heute dankbar?"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <button id="newPrompts">Neue Fragen</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-const MANTRAS = [
-  "Konstanz schlägt Perfektion.",
-  "Stärke wächst aus Technik + Geduld.",
-  "Locker ist schnell – und sauber.",
-  "Jeder Meter zählt – heute sinnvoll, morgen stärker.",
-  "Progress, not punishment.",
-  "Atmen, sauber bewegen, ankommen.",
-  "Training = Reiz · (Erholung)^2."
-];
+  <div id="tab-week" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <div class="title" id="weekTitle">📅 Kalenderwoche</div>
+        <div style="display:flex;gap:6">
+          <button id="prevWeek">«</button>
+          <button id="thisWeek" class="primary">Diese Woche</button>
+          <button id="nextWeek">»</button>
+        </div>
+      </div>
 
-const DINNERS = [
-  { name:"Süßkartoffel-Linsen-Suppe", tag:"70/30" },
-  { name:"Hirse-Tabouleh", tag:"70/30" },
-  { name:"Kartoffel-Erbsen-Suppe", tag:"70/30" },
-  { name:"Polenta mit Pilzen", tag:"70/30" },
-  { name:"Veggie-Chili", tag:"Aufbau" },
-  { name:"Ofengemüse + Kichererbsen-Bowl", tag:"Aufbau" },
-];
+      <div id="weekGrid" class="weekgrid" style="margin-top:10px"></div>
 
-const TPL = {
-  aufbau: [
-    { day:1, type:"kraft",    title:"Kraft: Squat + Bank", desc:"" },
-    { day:2, type:"ausdauer", title:"Ausdauer locker",    desc:"30–45 Min" },
-    { day:3, type:"crossfit", title:"CrossFit",           desc:"All-out + 10’ Mobility" },
-    { day:4, type:"rest",     title:"Active Recovery",    desc:"Spaziergang + 15’ Mobility" },
-    { day:5, type:"kraft",    title:"Kraft: Deadlift + Press", desc:"" },
-    { day:6, type:"ausdauer", title:"Ausdauer mittel/lang", desc:"10 km / 60–70’" },
-    { day:7, type:"rest",     title:"Rest", desc:"Spaziergang/Kinderwagen" },
-  ],
-  einstieg: [
-    { day:1, type:"kraft", title:"Kraft (leicht)", desc:"Squat + Bank Technik" },
-    { day:2, type:"ausdauer", title:"Lauf locker", desc:"30–40’" },
-    { day:3, type:"crossfit", title:"CrossFit (Technik)", desc:"~70%" },
-    { day:4, type:"rest", title:"Active Recovery", desc:"+ 15’ Mobility" },
-    { day:5, type:"kraft", title:"Kraft (leicht)", desc:"Deadlift + Press Technik" },
-    { day:6, type:"ausdauer", title:"Rad locker", desc:"45’ / Spaziergang" },
-    { day:7, type:"rest", title:"Rest", desc:"Entlasten" },
-  ],
-  deload: [
-    { day:1, type:"kraft", title:"Kraft leicht", desc:"-40% · Technik" },
-    { day:2, type:"ausdauer", title:"Rad/Lauf EASY", desc:"30’" },
-    { day:3, type:"rest", title:"Mobility/Technik", desc:"kein CrossFit" },
-    { day:4, type:"rest", title:"Rest Day", desc:"" },
-    { day:5, type:"kraft", title:"Kraft leicht", desc:"-40% · Technik" },
-    { day:6, type:"ausdauer", title:"Lauf locker", desc:"30–40’" },
-    { day:7, type:"rest", title:"Rest Day", desc:"" },
-  ],
-};
+      <div class="grid2" style="margin-top:12px">
+        <div class="card">
+          <div class="title">🗒️ Wochen-Notiz</div>
+          <textarea id="weekNote" placeholder="Gedanken zur Woche…"></textarea>
+        </div>
+        <div class="card">
+          <div class="title">🍽️ 70/30-Abendessen-Ideen</div>
+          <div class="grid3" style="margin-top:8px" id="dinnerIdeas"></div>
+          <div class="small muted" style="margin-top:6">In Deload-Wochen werden automatisch bevorzugt 70/30-Ideen angezeigt.</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-const useStored = (key, initial) => {
-  const [v,setV] = useState(()=>{ try{const r=localStorage.getItem(key);return r?JSON.parse(r):initial}catch{return initial} });
-  useEffect(()=>{ try{localStorage.setItem(key,JSON.stringify(v))}catch{} },[key,v]);
-  return [v,setV];
-};
+  <div id="tab-history" class="hidden">
+    <div class="card">
+      <div class="title">📈 Historie (letzte 30 Tage)</div>
+      <div class="grid3" style="margin-top:10px">
+        <div class="card"><div class="small muted">Ausdauer</div><div class="title" id="cnt-ausdauer">0</div></div>
+        <div class="card"><div class="small muted">Kraft</div><div class="title" id="cnt-kraft">0</div></div>
+        <div class="card"><div class="small muted">CrossFit</div><div class="title" id="cnt-crossfit">0</div></div>
+      </div>
 
-const getBlock = (d) => BLOCKS.find(b => d >= new Date(b.start) && d <= new Date(b.end)) || {name:"Plan",type:"aufbau"};
+      <div style="margin-top:10px">
+        <div class="small muted">Verteilung</div>
+        <div class="bar"><span id="bar-fill" style="width:0%"></span></div>
+        <div class="small muted" style="display:flex;gap:12px;margin-top:6">
+          <span id="pct-ausdauer">🏃 0%</span>
+          <span id="pct-kraft">💪 0%</span>
+          <span id="pct-crossfit">🔥 0%</span>
+          <span id="cnt-rest">🛌 0 Rest-Tage</span>
+        </div>
+      </div>
 
-function App(){
-  const [tab,setTab] = useStored("tab","today");
-  const [weekStart, setWeekStart] = useStored("weekStart", startOfWeek(today()).toISOString());
-  const [custom, setCustom] = useStored("custom", {}); // dateKey -> {type,title,desc}
-  const [check, setCheck]   = useStored("check", {});  // checklist
-  const [notes, setNotes]   = useStored("notes", "");  // freie Notiz
-  const [journal, setJournal]= useStored("journal", {}); // dateKey -> {reflexion,planung,dank}
+      <div class="grid2" style="margin-top:12px">
+        <div>
+          <div class="small muted">Filter</div>
+          <div style="display:flex;gap:6;flex-wrap:wrap;margin-top:6">
+            <button class="chip hist-filter" data-filter="alle">alle</button>
+            <button class="chip hist-filter" data-filter="ausdauer">ausdauer</button>
+            <button class="chip hist-filter" data-filter="kraft">kraft</button>
+            <button class="chip hist-filter" data-filter="crossfit">crossfit</button>
+            <button class="chip hist-filter" data-filter="rest">rest</button>
+          </div>
+        </div>
+      </div>
 
-  const wStart = new Date(weekStart);
-  const block = getBlock(wStart);
-  const tpl = TPL[block.type];
+      <div id="historyList" style="margin-top:10px"></div>
+      <div id="historyEmpty" class="muted small" style="margin-top:10px">Noch keine Einträge in den letzten 30 Tagen.</div>
+    </div>
+  </div>
+</div>
 
-  const days = useMemo(()=> Array.from({length:7},(_,i)=> new Date(wStart.getTime()+i*86400000)),[weekStart]);
-  const plan = days.map(d=>{
-    const dow=((d.getDay()+6)%7)+1;
-    const key=d.toISOString().slice(0,10);
-    const base=tpl.find(x=>x.day===dow);
-    const c=custom[key]||{};
-    const type = c.type ?? base.type;
-    const title= c.title?? base.title;
-    const desc = c.desc ?? base.desc;
-    const isRest = type==="rest" || /Rest/i.test(title);
-    return {date:d,key,type,title,desc,isRest};
-  });
+<script>
+  // ===== Helper =====
+  const qs = (s,root=document)=>root.querySelector(s);
+  const qsa = (s,root=document)=>Array.from(root.querySelectorAll(s));
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.`;
+  const weekday = d => d.toLocaleDateString('de-AT',{weekday:'short'});
+  const startOfWeek = (d)=>{ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; };
+  const keyOf = d => d.toISOString().slice(0,10);
+  const today = ()=> new Date();
 
-  const isToday=(d)=> today().toDateString()===d.toDateString();
-  const mantra = MANTRAS[((Math.floor((today()-new Date("2025-01-01"))/86400000)%MANTRAS.length)+MANTRAS.length)%MANTRAS.length];
-
-  const dinnerFor = (d) => {
-    const b=getBlock(d);
-    const pool=b.type==="deload"? DINNERS.filter(x=>x.tag==="70/30") : DINNERS;
-    const idx=Math.abs(Math.floor((d - new Date("2025-01-01"))/86400000))%pool.length;
-    return pool[idx]?.name || "Gemüse-Bowl";
+  // ===== Static Data =====
+  const BLOCKS = [
+    { name:"Einstieg", type:"einstieg", start:"2025-09-01", end:"2025-09-07" },
+    { name:"Aufbau I", type:"aufbau",  start:"2025-09-08", end:"2025-09-28" },
+    { name:"Deload",   type:"deload",  start:"2025-09-29", end:"2025-10-05" },
+    { name:"Aufbau II",type:"aufbau",  start:"2025-10-06", end:"2025-10-26" },
+    { name:"Deload",   type:"deload",  start:"2025-10-27", end:"2025-11-02" },
+    { name:"Aufbau III",type:"aufbau", start:"2025-11-03", end:"2025-12-14" },
+    { name:"Deload",   type:"deload",  start:"2025-12-15", end:"2025-12-21" }
+  ];
+  const MANTRAS = [
+    "Konstanz schlägt Perfektion.","Stärke wächst aus Technik + Geduld.","Locker ist schnell – und sauber.",
+    "Jeder Meter zählt – heute sinnvoll, morgen stärker.","Progress, not punishment.","Atmen, sauber bewegen, ankommen.",
+    "Training = Reiz · (Erholung)^2."
+  ];
+  const DINNERS = [
+    { name:"Süßkartoffel-Linsen-Suppe", tag:"70/30" },
+    { name:"Hirse-Tabouleh", tag:"70/30" },
+    { name:"Kartoffel-Erbsen-Suppe", tag:"70/30" },
+    { name:"Polenta mit Pilzen", tag:"70/30" },
+    { name:"Veggie-Chili", tag:"Aufbau" },
+    { name:"Ofengemüse + Kichererbsen-Bowl", tag:"Aufbau" }
+  ];
+  const TPL = {
+    aufbau:[
+      {day:1,type:"kraft",title:"Kraft: Squat + Bank",desc:""},
+      {day:2,type:"ausdauer",title:"Ausdauer locker",desc:"30–45'"},
+      {day:3,type:"crossfit",title:"CrossFit",desc:"All-out + 10' Mobility"},
+      {day:4,type:"rest",title:"Active Recovery",desc:"Spaziergang + 15' Mobility"},
+      {day:5,type:"kraft",title:"Kraft: Deadlift + Press",desc:""},
+      {day:6,type:"ausdauer",title:"Ausdauer mittel/lang",desc:"10 km / 60–70'"},
+      {day:7,type:"rest",title:"Rest",desc:"Spaziergang/Kinderwagen"},
+    ],
+    einstieg:[
+      {day:1,type:"kraft",title:"Kraft (leicht)",desc:"Squat + Bank Technik"},
+      {day:2,type:"ausdauer",title:"Lauf locker",desc:"30–40'"},
+      {day:3,type:"crossfit",title:"CrossFit (Technik)",desc:"~70%"},
+      {day:4,type:"rest",title:"Active Recovery",desc:"+ 15' Mobility"},
+      {day:5,type:"kraft",title:"Kraft (leicht)",desc:"Deadlift + Press Technik"},
+      {day:6,type:"ausdauer",title:"Rad locker",desc:"45' / Spaziergang"},
+      {day:7,type:"rest",title:"Rest",desc:"Entlasten"},
+    ],
+    deload:[
+      {day:1,type:"kraft",title:"Kraft leicht",desc:"−40% · Technik"},
+      {day:2,type:"ausdauer",title:"Rad/Lauf EASY",desc:"30'"},
+      {day:3,type:"rest",title:"Mobility/Technik",desc:"kein CrossFit"},
+      {day:4,type:"rest",title:"Rest Day",desc:""},
+      {day:5,type:"kraft",title:"Kraft leicht",desc:"−40% · Technik"},
+      {day:6,type:"ausdauer",title:"Lauf locker",desc:"30–40'"},
+      {day:7,type:"rest",title:"Rest Day",desc:""},
+    ]
   };
 
-  // Journaling Pools
+  // ===== Storage =====
+  const load = (k,init)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):init;}catch{return init;} };
+  const save = (k,v)=>{ try{localStorage.setItem(k,JSON.stringify(v));}catch{} };
+
+  // State
+  let state = {
+    tab: load('tab','today'),
+    weekStart: load('weekStart', startOfWeek(today()).toISOString()),
+    custom: load('custom', {}),    // dateKey -> {type,title,desc}
+    check:  load('check', {}),     // dateKey -> {train,dinner,rest,water,sleep}
+    journal:load('journal', {}),   // dateKey -> {reflexion, planung, dank}
+    notes:  load('notes','')       // week note
+  };
+
+  // ===== UI Setup =====
+  function setTab(name){
+    state.tab=name; save('tab',name);
+    qsa('[data-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tab===name));
+    ['today','week','history'].forEach(id=> qs('#tab-'+id).classList.toggle('hidden', id!==name));
+  }
+
+  qsa('[data-tab]').forEach(btn=> btn.addEventListener('click', ()=> setTab(btn.dataset.tab)));
+
+  // Week nav
+  qs('#prevWeek').onclick = ()=>{ const d=new Date(state.weekStart); d.setDate(d.getDate()-7); state.weekStart=d.toISOString(); save('weekStart',state.weekStart); renderWeek(); renderToday(); renderHistory(); };
+  qs('#nextWeek').onclick = ()=>{ const d=new Date(state.weekStart); d.setDate(d.getDate()+7); state.weekStart=d.toISOString(); save('weekStart',state.weekStart); renderWeek(); renderToday(); renderHistory(); };
+  qs('#thisWeek').onclick = ()=>{ state.weekStart=startOfWeek(today()).toISOString(); save('weekStart',state.weekStart); renderWeek(); renderToday(); renderHistory(); };
+
+  // Prompts
   const Q_REFLEX = [
-    "Was hat mir Training heute über mich gezeigt?",
-    "Wo war ich technisch sauber – und warum?",
-    "Was hat Energie gegeben, was genommen?"
+    "Was hat mir Training heute über mich gezeigt?","Wo war ich technisch sauber – und warum?","Was hat Energie gegeben, was genommen?"
   ];
   const Q_PLAN = [
-    "Was ist morgen realistisch + sinnvoll?",
-    "Welcher Reiz ist morgen dran (leicht/mittel/hart)?",
-    "Was plane ich für Schlaf & Essen?"
+    "Was ist morgen realistisch + sinnvoll?","Welcher Reiz ist morgen dran (leicht/mittel/hart)?","Was plane ich für Schlaf & Essen?"
   ];
   const Q_DANK = [
-    "Wofür bin ich heute dankbar?",
-    "Wer/was hat mich unterstützt?",
-    "Welcher kleine Moment war schön?"
+    "Wofür bin ich heute dankbar?","Wer/was hat mich unterstützt?","Welcher kleine Moment war schön?"
   ];
-  const pick3 = () => ({
-    reflex: Q_REFLEX[Math.floor(Math.random()*Q_REFLEX.length)],
-    plan:   Q_PLAN[Math.floor(Math.random()*Q_PLAN.length)],
-    dank:   Q_DANK[Math.floor(Math.random()*Q_DANK.length)],
-  });
-  const [prompts,setPrompts] = useState(pick3());
 
-  // Update helpers keep existing fields
-  const setType = (key,value,fallbackTitle,fallbackDesc) =>
-    setCustom(prev => ({...prev,[key]:{title:prev[key]?.title??fallbackTitle, desc:prev[key]?.desc??fallbackDesc, type:value}}));
-  const setTitle= (key,value,fallbackType,fallbackDesc) =>
-    setCustom(prev => ({...prev,[key]:{type:prev[key]?.type??fallbackType, desc:prev[key]?.desc??fallbackDesc, title:value}}));
-  const setDesc = (key,value,fallbackType,fallbackTitle) =>
-    setCustom(prev => ({...prev,[key]:{type:prev[key]?.type??fallbackType, title:prev[key]?.title??fallbackTitle, desc:value}}));
+  function pick3(){
+    const r = arr => arr[Math.floor(Math.random()*arr.length)];
+    return {reflex:r(Q_REFLEX), plan:r(Q_PLAN), dank:r(Q_DANK)};
+  }
+  let prompts = pick3();
+  qs('#newPrompts').onclick = ()=>{ prompts = pick3(); setJournalPlaceholders(); };
 
-  // History (last 30 days)
-  const allKeys = useMemo(()=> Object.keys(custom).concat(plan.map(p=>p.key)).filter((v,i,a)=>a.indexOf(v)===i).sort(),[custom,plan]);
-  const last30 = useMemo(()=>{
-    const now=today();
-    return allKeys
+  function getBlock(d){
+    const x=new Date(d);
+    return BLOCKS.find(b=> x>=new Date(b.start) && x<=new Date(b.end)) || {name:'Plan', type:'aufbau'};
+  }
+
+  function getPlanDays(){
+    const start = new Date(state.weekStart);
+    const block = getBlock(start);
+    const tpl = TPL[block.type];
+    const days = Array.from({length:7},(_,i)=> new Date(start.getTime()+i*86400000));
+    return days.map(d=>{
+      const dow=((d.getDay()+6)%7)+1;
+      const def = tpl.find(x=>x.day===dow);
+      const key=keyOf(d);
+      const c = state.custom[key]||{};
+      const type=c.type ?? def.type;
+      const title=c.title ?? def.title;
+      const desc=c.desc ?? def.desc;
+      const isRest = type==='rest' || /Rest/i.test(title);
+      return {date:d,key,type,title,desc,isRest, block};
+    });
+  }
+
+  function dinnerFor(date){
+    const b=getBlock(date);
+    const pool = b.type==='deload' ? DINNERS.filter(x=>x.tag==='70/30') : DINNERS;
+    const idx = Math.abs(Math.floor((date - new Date('2025-01-01'))/86400000)) % pool.length;
+    return pool[idx]?.name || 'Gemüse-Bowl';
+  }
+
+  function setJournalPlaceholders(){
+    qs('#j-reflex').placeholder = prompts.reflex;
+    qs('#j-plan').placeholder = prompts.plan;
+    qs('#j-dank').placeholder = prompts.dank;
+  }
+
+  // ===== Render TODAY =====
+  function renderToday(){
+    const days = getPlanDays();
+    const block = getBlock(new Date(state.weekStart));
+    qs('#blockLabel').textContent = `Block: ${block.name}`;
+
+    // mantra
+    const idx = Math.floor((today()-new Date('2025-01-01'))/86400000);
+    qs('#mantra').textContent = MANTRAS[((idx%MANTRAS.length)+MANTRAS.length)%MANTRAS.length];
+
+    const t = days.find(d=> d.date.toDateString() === today().toDateString());
+    const card = qs('#todayCard');
+    card.innerHTML = t ? `
+      <div class="chip">Datum: ${weekday(t.date)} · ${fmt(t.date)}</div>
+      <div style="margin-top:8px"><b>Typ:</b> ${({'ausdauer':'Ausdauer','kraft':'Kraft','crossfit':'CrossFit','rest':'Rest'})[t.type]}</div>
+      <div><b>Titel:</b> ${t.title}</div>
+      ${t.desc?`<div><b>Details:</b> ${t.desc}</div>`:''}
+      <div style="margin-top:8px"><b>Abendessen-Idee:</b> ${dinnerFor(t.date)}</div>
+    ` : `<span class="small muted">Kein Tagesplan gefunden.</span>`;
+
+    // checklist
+    const ck = state.check[t?.key] || {};
+    const c = qs('#todayChecklist');
+    c.innerHTML = `
+      <div class="grid4">
+        ${['train','dinner','rest','water','sleep'].map(k=>`
+          <label class="chip" style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" ${ck[k]?'checked':''} data-check="${k}">
+            ${k==='train'?'Training':k==='dinner'?'Essen 70/30':k==='rest'?'Rest/Active':k==='water'?'2L Wasser':'7h Schlaf'}
+          </label>
+        `).join('')}
+      </div>
+    `;
+    qsa('[data-check]',c).forEach(inp=>{
+      inp.onchange = ()=> {
+        state.check[t.key] = {...(state.check[t.key]||{}), [inp.dataset.check]: inp.checked};
+        save('check', state.check);
+      };
+    });
+
+    // journaling values
+    if(t){
+      qs('#j-reflex').value = (state.journal[t.key]?.reflexion)||'';
+      qs('#j-plan').value   = (state.journal[t.key]?.planung)||'';
+      qs('#j-dank').value   = (state.journal[t.key]?.dank)||'';
+      ['reflex','plan','dank'].forEach(()=>{});
+      qs('#j-reflex').oninput = e=>{ state.journal[t.key] = {...(state.journal[t.key]||{}), reflexion:e.target.value}; save('journal',state.journal); };
+      qs('#j-plan').oninput   = e=>{ state.journal[t.key] = {...(state.journal[t.key]||{}), planung:e.target.value}; save('journal',state.journal); };
+      qs('#j-dank').oninput   = e=>{ state.journal[t.key] = {...(state.journal[t.key]||{}), dank:e.target.value}; save('journal',state.journal); };
+    }
+    setJournalPlaceholders();
+  }
+
+  // ===== Render WEEK =====
+  function renderWeek(){
+    const days = getPlanDays();
+    const start = new Date(state.weekStart);
+    qs('#weekTitle').textContent = `📅 Kalenderwoche – ${fmt(start)} – ${fmt(new Date(start.getTime()+6*86400000))}`;
+
+    const grid = qs('#weekGrid');
+    grid.innerHTML = '';
+    days.forEach(d=>{
+      const card = document.createElement('div');
+      card.className='card';
+      card.style.padding='10px';
+      card.innerHTML = `
+        <div class="dayhead">${weekday(d.date)} · ${fmt(d.date)}</div>
+        <div class="small muted" style="margin-top:6px">Typ</div>
+        <select data-type="${d.key}">
+          <option value="ausdauer"${d.type==='ausdauer'?' selected':''}>🏃 Ausdauer</option>
+          <option value="kraft"${d.type==='kraft'?' selected':''}>💪 Kraft</option>
+          <option value="crossfit"${d.type==='crossfit'?' selected':''}>🔥 CrossFit</option>
+          <option value="rest"${d.type==='rest'?' selected':''}>🛌 Rest / Active</option>
+        </select>
+        <div class="small muted" style="margin-top:8px">Titel</div>
+        <input type="text" data-title="${d.key}" value="${d.title.replace(/"/g,'&quot;')}" placeholder="z. B. Laufen, Kraft Tag A">
+        <div class="small muted" style="margin-top:8px">Beschreibung (Dauer, km, RPE …)</div>
+        <input type="text" data-desc="${d.key}" value="${(d.desc||'').replace(/"/g,'&quot;')}" placeholder="z. B. 7 km · 45’ · RPE 6/10">
+      `;
+      grid.appendChild(card);
+    });
+
+    // handlers
+    qsa('[data-type]',grid).forEach(sel=>{
+      sel.onchange = ()=> {
+        const key = sel.dataset.type;
+        const cur = state.custom[key] || {};
+        state.custom[key] = { type: sel.value, title: cur.title || '', desc: cur.desc || '' };
+        save('custom',state.custom);
+        renderToday(); renderHistory();
+      };
+    });
+    qsa('[data-title]',grid).forEach(inp=>{
+      inp.oninput = ()=> {
+        const key=inp.dataset.title; const cur=state.custom[key]||{};
+        state.custom[key] = { type: cur.type || getPlanDays().find(x=>x.key===key).type, title: inp.value, desc: cur.desc || '' };
+        save('custom',state.custom);
+        renderToday(); renderHistory();
+      };
+    });
+    qsa('[data-desc]',grid).forEach(inp=>{
+      inp.oninput = ()=> {
+        const key=inp.dataset.desc; const cur=state.custom[key]||{};
+        const t = getPlanDays().find(x=>x.key===key);
+        state.custom[key] = { type: cur.type || t.type, title: cur.title || t.title, desc: inp.value };
+        save('custom',state.custom);
+      };
+    });
+
+    // week note
+    qs('#weekNote').value = state.notes || '';
+    qs('#weekNote').oninput = e=>{ state.notes=e.target.value; save('notes',state.notes); };
+
+    // dinner ideas
+    const ideas = qs('#dinnerIdeas'); ideas.innerHTML='';
+    DINNERS.forEach(d=> {
+      const div=document.createElement('div'); div.className='chip'; div.textContent=d.name; ideas.appendChild(div);
+    });
+  }
+
+  // ===== Render HISTORY =====
+  function renderHistory(filter='alle'){
+    const now = today();
+    const keys = Array.from(new Set([...Object.keys(state.custom), ...getPlanDays().map(p=>p.key)])).sort();
+    const last30 = keys
       .map(k=>({k, d:new Date(k)}))
       .filter(x=> (now - x.d) <= 30*86400000)
       .map(({k,d})=>{
-        const p = plan.find(p=>p.key===k) || {};
-        const c = custom[k]||{};
-        return { date:d, key:k, type:c.type??p.type, title:c.title??p.title, desc:c.desc??p.desc };
+        const p = getPlanDays().find(p=>p.key===k) || {};
+        const c = state.custom[k]||{};
+        return { date:d, key:k, type: c.type ?? p.type, title: c.title ?? p.title, desc: c.desc ?? p.desc };
       })
       .sort((a,b)=> b.date - a.date);
-  },[allKeys,plan,custom]);
 
-  const stats = useMemo(()=>{
-    const counts={ausdauer:0,kraft:0,crossfit:0,rest:0};
-    last30.forEach(x=>{ if(counts[x.type]!=null) counts[x.type]++; });
+    const list = qs('#historyList');
+    const empty = qs('#historyEmpty');
+    const data = filter==='alle'? last30 : last30.filter(x=> x.type===filter);
+
+    list.innerHTML='';
+    data.forEach(x=>{
+      const div=document.createElement('div'); div.className='card'; div.style.cssText='padding:10px;margin-top:8px';
+      const icon = x.type==='ausdauer'?'🏃':x.type==='kraft'?'💪':x.type==='crossfit'?'🔥':'🛌';
+      div.innerHTML = `
+        <div class="dayhead">${weekday(x.date)} · ${fmt(x.date)}</div>
+        <div class="title" style="margin-top:4px">${icon} ${x.title || '(ohne Titel)'}</div>
+        ${x.desc? `<div class="muted">${x.desc}</div>` : ''}
+      `;
+      list.appendChild(div);
+    });
+    empty.style.display = data.length? 'none':'block';
+
+    // stats
+    const counts = {ausdauer:0,kraft:0,crossfit:0,rest:0};
+    last30.forEach(x=> { if(counts[x.type]!=null) counts[x.type]++; });
     const total = last30.length || 1;
-    const pct = Object.fromEntries(Object.entries(counts).map(([k,v])=>[k, Math.round(100*v/total)]));
-    return {counts,pct,total};
-  },[last30]);
+    const pct = {
+      ausdauer: Math.round(100*counts.ausdauer/total),
+      kraft: Math.round(100*counts.kraft/total),
+      crossfit: Math.round(100*counts.crossfit/total)
+    };
+    qs('#cnt-ausdauer').textContent = counts.ausdauer;
+    qs('#cnt-kraft').textContent    = counts.kraft;
+    qs('#cnt-crossfit').textContent = counts.crossfit;
+    qs('#cnt-rest').textContent     = `🛌 ${counts.rest} Rest-Tage`;
+    qs('#pct-ausdauer').textContent = `🏃 ${pct.ausdauer}%`;
+    qs('#pct-kraft').textContent    = `💪 ${pct.kraft}%`;
+    qs('#pct-crossfit').textContent = `🔥 ${pct.crossfit}%`;
+    qs('#bar-fill').style.width = `${Math.min(100, pct.ausdauer+pct.kraft+pct.crossfit)}%`;
 
-  return (
-    <div className="container">
-      <header>
-        <div>
-          <h1>Rest-Day Coach</h1>
-          <div className="sub">Block: <b>{block.name}</b></div>
-        </div>
-        <nav className="tabs" role="tablist">
-          <button className={`tab ${tab==='today'?'active':''}`} onClick={()=>setTab('today')}>Heute</button>
-          <button className={`tab ${tab==='week'?'active':''}`} onClick={()=>setTab('week')}>Woche</button>
-          <button className={`tab ${tab==='history'?'active':''}`} onClick={()=>setTab('history')}>Historie</button>
-        </nav>
-      </header>
+    // filter buttons
+    qsa('.hist-filter').forEach(b=>{
+      b.onclick = ()=> renderHistory(b.dataset.filter);
+    });
+  }
 
-      {/* ========= TAB: TODAY ========= */}
-      {tab==='today' && (
-        <>
-          <div className="mantra"><b>Mantra:</b> {mantra}</div>
-
-          <div className="grid2">
-            {/* Tageskarte */}
-            <div className="card">
-              <div className="title" style={{marginBottom:8}}>📌 Tageskarte</div>
-              {plan.map(d=> isToday(d.date) ? (
-                <div key={d.key}>
-                  <div className="chip">Datum: {weekday(d.date)} · {fmt(d.date)}</div>
-                  <div style={{marginTop:8}}><b>Typ:</b> {d.type==='kraft'?'Kraft':d.type==='ausdauer'?'Ausdauer':d.type==='crossfit'?'CrossFit':'Rest'}</div>
-                  <div><b>Titel:</b> {d.title}</div>
-                  {d.desc && <div><b>Details:</b> {d.desc}</div>}
-                  <div style={{marginTop:8}}><b>Abendessen-Idee:</b> {dinnerFor(d.date)}</div>
-                </div>
-              ):null)}
-              {!plan.some(d=>isToday(d.date)) && <div className="muted small">Kein Tagesplan gefunden.</div>}
-            </div>
-
-            {/* Checkliste + Journaling */}
-            <div className="card">
-              <div className="title" style={{marginBottom:8}}>✅ Checkliste & Journaling</div>
-              {plan.map(d=> isToday(d.date) ? (
-                <div key={d.key}>
-                  <div className="grid4">
-                    {["train","dinner","rest","water","sleep"].map(k=>(
-                      <label key={k} className="chip" style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <input type="checkbox"
-                          checked={!!check[d.key]?.[k]}
-                          onChange={e=> setCheck(prev=>({ ...prev, [d.key]: { ...(prev[d.key]||{}), [k]: e.target.checked } }))}
-                        />
-                        {k==="train"?"Training":k==="dinner"?"Essen 70/30":k==="rest"?"Rest/Active":k==="water"?"2L Wasser":"7h Schlaf"}
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="grid3" style={{marginTop:12}}>
-                    <div>
-                      <div className="small muted">Reflexion</div>
-                      <textarea placeholder={prompts.reflex}
-                        value={journal[d.key]?.reflexion||""}
-                        onChange={e=> setJournal(prev=>({...prev,[d.key]:{...(prev[d.key]||{}), reflexion:e.target.value}}))}
-                      ></textarea>
-                    </div>
-                    <div>
-                      <div className="small muted">Tagesplanung</div>
-                      <textarea placeholder={prompts.plan}
-                        value={journal[d.key]?.planung||""}
-                        onChange={e=> setJournal(prev=>({...prev,[d.key]:{...(prev[d.key]||{}), planung:e.target.value}}))}
-                      ></textarea>
-                    </div>
-                    <div>
-                      <div className="small muted">Dankbarkeit</div>
-                      <textarea placeholder={prompts.dank}
-                        value={journal[d.key]?.dank||""}
-                        onChange={e=> setJournal(prev=>({...prev,[d.key]:{...(prev[d.key]||{}), dank:e.target.value}}))}
-                      ></textarea>
-                    </div>
-                  </div>
-                  <div style={{marginTop:8}}>
-                    <button onClick={()=>setPrompts(pick3())}>Neue Fragen</button>
-                  </div>
-                </div>
-              ):null)}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ========= TAB: WEEK ========= */}
-      {tab==='week' && (
-        <div className="card">
-          <div className="toolbar">
-            <div className="title">📅 Kalenderwoche – {fmt(new Date(wStart))} – {fmt(new Date(wStart.getTime()+6*86400000))}</div>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setWeekStart(new Date(wStart.getTime()-7*86400000).toISOString())}>«</button>
-              <button className="primary" onClick={()=>setWeekStart(startOfWeek(today()).toISOString())}>Diese Woche</button>
-              <button onClick={()=>setWeekStart(new Date(wStart.getTime()+7*86400000).toISOString())}>»</button>
-            </div>
-          </div>
-
-          <div className="weekgrid" style={{marginTop:10}}>
-            {plan.map(d=>(
-              <div key={d.key} className="card" style={{padding:10}}>
-                <div className="dayhead">{weekday(d.date)} · {fmt(d.date)}</div>
-
-                <div className="small muted" style={{marginTop:6}}>Typ</div>
-                <select value={d.type} onChange={e=> setType(d.key,e.target.value,d.title,d.desc)}>
-                  <option value="ausdauer">🏃 Ausdauer</option>
-                  <option value="kraft">💪 Kraft</option>
-                  <option value="crossfit">🔥 CrossFit</option>
-                  <option value="rest">🛌 Rest / Active</option>
-                </select>
-
-                <div className="small muted" style={{marginTop:8}}>Titel</div>
-                <input type="text" value={d.title} onChange={e=> setTitle(d.key,e.target.value,d.type,d.desc)} placeholder="z. B. Laufen, Kraft Tag A"/>
-
-                <div className="small muted" style={{marginTop:8}}>Beschreibung (Dauer, km, RPE …)</div>
-                <input type="text" value={d.desc} onChange={e=> setDesc(d.key,e.target.value,d.type,d.title)} placeholder="z. B. 7 km · 45’ · RPE 6/10"/>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid2" style={{marginTop:12}}>
-            <div className="card">
-              <div className="title">🗒️ Wochen-Notiz</div>
-              <textarea placeholder="Gedanken zur Woche…" value={notes} onChange={(e)=>setNotes(e.target.value)}></textarea>
-            </div>
-            <div className="card">
-              <div className="title">🍽️ 70/30-Abendessen-Ideen</div>
-              <div className="grid3" style={{marginTop:8}}>
-                {DINNERS.map((d,i)=>(
-                  <div key={i} className="chip">{d.name}</div>
-                ))}
-              </div>
-              <div className="small muted" style={{marginTop:6}}>In Deload-Wochen werden automatisch bevorzugt 70/30-Ideen angezeigt.</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========= TAB: HISTORY ========= */}
-      {tab==='history' && (
-        <div className="card">
-          <div className="title">📈 Historie (letzte 30 Tage)</div>
-          <div className="grid3" style={{marginTop:10}}>
-            <div className="card"><div className="small muted">Ausdauer</div><div className="title">{stats.counts.ausdauer}</div></div>
-            <div className="card"><div className="small muted">Kraft</div><div className="title">{stats.counts.kraft}</div></div>
-            <div className="card"><div className="small muted">CrossFit</div><div className="title">{stats.counts.crossfit}</div></div>
-          </div>
-
-          <div style={{marginTop:10}}>
-            <div className="small muted">Verteilung</div>
-            <div className="bar"><span style={{width:`${Math.min(100,stats.pct.ausdauer+stats.pct.kraft+stats.pct.crossfit)}%`}}></span></div>
-            <div className="small muted" style={{display:"flex",gap:12,marginTop:6}}>
-              <span>🏃 {stats.pct.ausdauer}%</span>
-              <span>💪 {stats.pct.kraft}%</span>
-              <span>🔥 {stats.pct.crossfit}%</span>
-              <span>🛌 {stats.counts.rest} Rest-Tage</span>
-            </div>
-          </div>
-
-          <div className="grid2" style={{marginTop:12}}>
-            <div>
-              <div className="small muted">Filter</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
-                {["alle","ausdauer","kraft","crossfit","rest"].map(f=>(
-                  <button key={f} className={`chip`} onClick={()=>setTab(`history-${f}`)}>{f}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div style={{marginTop:10}}>
-            {(tab.startsWith("history-")? last30.filter(x=> tab==="history-alle" ? true : x.type===tab.replace("history-","")) : last30)
-              .map(x=>(
-              <div key={x.key} className="card" style={{padding:10, marginTop:8}}>
-                <div className="dayhead">{weekday(x.date)} · {fmt(x.date)}</div>
-                <div className="title" style={{marginTop:4}}>
-                  {x.type==="ausdauer"?"🏃":x.type==="kraft"?"💪":x.type==="crossfit"?"🔥":"🛌"} {x.title||"(ohne Titel)"}
-                </div>
-                {x.desc && <div className="muted">{x.desc}</div>}
-              </div>
-            ))}
-            {last30.length===0 && <div className="muted small">Noch keine Einträge in den let
+  // ===== Init =====
+  setTab(state.tab);
+  renderWeek();
+  renderToday();
+  renderHistory();
+</script>
+</body>
+</html>
